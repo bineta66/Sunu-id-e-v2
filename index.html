@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sunu-Idées</title>
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Polices -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Icônes -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Supabase (CDN client) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Remplis ces valeurs (depuis ton projet Supabase) -->
+  <script>
+    window.SUPABASE_URL = "PASTE_SUPABASE_URL_HERE";
+    window.SUPABASE_ANON_KEY = "PASTE_SUPABASE_ANON_KEY_HERE";
+  </script>
+</head>
+
+<body>
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="navbar">
+
+    <div class="navbar__brand">
+      <span class="navbar__logo"><i class="fa-solid fa-lightbulb"></i></span>
+
+      <div>
+        <div class="navbar__title">Sunu-Idées</div>
+        <div class="navbar__tagline">Une idée peut changer les choses</div>
+      </div>
+    </div>
+    <button class="burger" id="burger">
+   <i class="fa-solid fa-bars"></i>
+</button>
+
+    <nav class="navbar__links">
+      <a href="#idees" class="navbar__link">
+        <i class="fa-solid fa-users"></i> Communauté
+      </a>
+
+      <a href="#" class="navbar__link">
+        <i class="fa-solid fa-shield-halved"></i> Anonyme & collaboratif
+      </a>
+    </nav>
+
+    <button class="btn btn--primary" id="ouvrirModal">
+      <i class="fa-solid fa-lightbulb"></i> Ajouter une idée
+    </button>
+    
+
+  </header>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+
+    <div class="hero__texte">
+      <h1>
+        Bienvenue sur<br>
+        <span>Sunu-Idées</span>
+      </h1>
+
+      <p class="hero__slogan">Partage tes idées et améliore ton environnement</p>
+
+      <p class="hero__description">
+        Sunu-Idées est une plateforme collaborative où chaque membre peut proposer des idées,
+        améliorer la vie du campus et participer à des projets utiles pour tous.
+      </p>
+    </div>
+
+    <div class="hero__bloc">
+
+      <div class="hero__illustration">
+        <img src="images/boite.png" alt="sunu idee">
+
+      </div>
+
+      <button class="btn btn--primary" id="btnPartager">
+        <i class="fa-solid fa-paper-plane"></i> Partager une idée
+      </button>
+
+    </div>
+
+  </section>
+
+  <!-- ================= IDEES ================= -->
+  <section class="idees" id="idees">
+
+    <div class="idees__header">
+
+      <h2>
+        <i class="fa-solid fa-border-all"></i>
+        Mur des idées
+        <span id="compteurIdees">0</span>
+      </h2>
+
+      <p>Découvre et améliore les idées de la communauté</p>
+
+    </div>
+
+    <!-- filtres -->
+    <div class="idees__filtres">
+
+      <select id="filtreCategorie">
+        <option value="">Toutes les catégories</option>
+        <option>Pédagogie</option>
+        <option>Événement</option>
+        <option>Vie de campus</option>
+        <option>Amélioration technique</option>
+      </select>
+
+      <input type="text" id="recherche" placeholder="Rechercher une idée...">
+
+    </div>
+
+    <!-- cartes -->
+    <div class="idees__liste" id="listeIdees">
+      <!-- JS -->
+    </div>
+
+    <!-- pagination -->
+    <div class="pagination" id="pagination" style="display:none;"></div>
+
+    <!-- vide -->
+    <div class="idees__vide" id="etatVide" style="display:none;">
+
+      <i class="fa-regular fa-folder-open"></i>
+      <p>Aucune idée disponible</p>
+      <button class="btn btn--primary" id="btnVide">
+        Ajouter une idée
+      </button>
+    </div>
+
+  </section>
+
+  <!-- ================= MODAL ================= -->
+  <div class="modal" id="modal">
+    <div class="modal__contenu">
+      <button class="modal__fermer" id="fermerModal">&times;</button>
+      
+      <h2 id="titreModal">Ajouter une idée</h2>
+
+      <form id="formeIdee">
+        <div class="form-groupe">
+          <label for="titre">Titre de l'idée *</label>
+          <input type="text" id="titre" required>
+        </div>
+
+        <div class="form-groupe">
+          <label for="categorie">Catégorie *</label>
+          <select id="categorie" required>
+            <option value="">Choisir une catégorie</option>
+            <option>Pédagogie</option>
+            <option>Événement</option>
+            <option>Vie de campus</option>
+            <option>Amélioration technique</option>
+          </select>
+        </div>
+
+        <div class="form-groupe">
+          <label for="description">Description *</label>
+          <textarea id="description" rows="5" required></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn--primary">Soumettre</button>
+          <button type="button" class="btn btn--secondary" id="annulerModal">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
