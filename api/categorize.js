@@ -38,7 +38,7 @@ Réponds UNIQUEMENT avec le nom exact de la catégorie la plus appropriée, sans
       headers: {
         "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://votre-site.vercel.app",
+        "HTTP-Referer": "https://sunu-id-e-v2.vercel.app",
         "X-Title": "Idées Communauté",
       },
       body: JSON.stringify({
