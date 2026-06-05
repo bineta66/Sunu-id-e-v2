@@ -9,7 +9,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // =========================
 // CATEGORIES VALIDES
 // =========================
-const CATS_VALIDES = ["Pédagogie", "Événement", "Vie de campus", "Technique"];
+const CATS_VALIDES = ["Pédagogie", "Événement", "Vie de campus", "Amélioration technique"];
 
 // =========================
 // DOM
@@ -57,8 +57,17 @@ const CATEGORIES = {
   "Pédagogie":     { couleur: "#FF6B6B", icone: "fa-book" },
   "Événement":     { couleur: "#FFA94D", icone: "fa-calendar" },
   "Vie de campus": { couleur: "#51CF66", icone: "fa-building" },
-  "Technique":     { couleur: "#4C9AFF", icone: "fa-code" },
+  "Amélioration technique": { couleur: "#4C9AFF", icone: "fa-code" },
   "autres":        { couleur: "#888888", icone: "fa-lightbulb" }
+};
+
+// =========================
+// UTILS
+// =========================
+const sanitize = (str) => {
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
 };
 
 // =========================
@@ -105,19 +114,19 @@ function confirmerSuppression() {
 // =========================
 async function devinerCategorieIA(titreVal, descVal) {
   try {
-    const res = await fetch("/.netlify/functions/classify", {
+    const res = await fetch("/.netlify/functions/categorize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ titre: titreVal, description: descVal, categories: CATS_VALIDES })
     });
     if (!res.ok) throw new Error("API classify error");
     const data = await res.json();
-    const cat = data?.category;
-    if (!cat) return "autres";
-    return CATS_VALIDES.includes(cat) ? cat : "autres";
+    const cat = data?.categorie;
+    if (!cat) return "Amélioration technique";
+    return CATS_VALIDES.includes(cat) ? cat : "Amélioration technique";
   } catch (err) {
     console.warn("IA indisponible :", err);
-    return "autres";
+    return "Amélioration technique";
   }
 }
 
@@ -337,8 +346,8 @@ form?.addEventListener("submit", async (e) => {
 
   if (!validateForm()) return;
 
-  const titreVal = titre.value.trim();
-  const descVal  = description.value.trim();
+  const titreVal = sanitize(titre.value.trim());
+  const descVal  = sanitize(description.value.trim());
 
   const btnSubmit = form.querySelector("[type=submit]");
   btnSubmit.disabled    = true;
