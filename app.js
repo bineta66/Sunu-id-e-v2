@@ -105,7 +105,7 @@ function confirmerSuppression() {
 // =========================
 async function devinerCategorieIA(titreVal, descVal) {
   try {
-    const res = await fetch("/api/classify", {
+    const res = await fetch("/.netlify/functions/classify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ titre: titreVal, description: descVal, categories: CATS_VALIDES })
