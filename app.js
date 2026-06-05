@@ -1,483 +1,594 @@
-// Confirguration
-const CATEGORIES = {
-  "Pédagogie": { couleur: "#aa0909", icone: "fa-book" },
-  "Événement": { couleur: "#FFA94D", icone: "fa-calendar" },
-  "Vie de campus": { couleur: "#51CF66", icone: "fa-building" },
-  "Amélioration technique": { couleur: "#4C9AFF", icone: "fa-code" }
-};
+// =========================
+// SUPABASE CONFIG
+// =========================
+const SUPABASE_URL = "https://senudcheywqbzbstvpux.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlbnVkY2hleXdxYnpic3R2cHV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MDA1NzIsImV4cCI6MjA5NjE3NjU3Mn0.dc5G_-tHhq-tjgC27oWkZTPb4WdlBgSYQ0PoG-KXsmg";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// =========================
+// CATEGORIES VALIDES
+// =========================
+const CATS_VALIDES = ["Pédagogie", "Événement", "Vie de campus", "Technique"];
 
 // =========================
 // DOM
 // =========================
-const modal = document.getElementById("modal");
-const formeIdee = document.getElementById("formeIdee");
-const listeIdees = document.getElementById("listeIdees");
-const etatVide = document.getElementById("etatVide");
-const compteurIdees = document.getElementById("compteurIdees");
-const ouvrirModal = document.getElementById("ouvrirModal");
-const btnPartager = document.getElementById("btnPartager");
-const fermerModal = document.getElementById("fermerModal");
-const annulerModal = document.getElementById("annulerModal");
-const titreModal = document.getElementById("titreModal");
-const filtreCategorie = document.getElementById("filtreCategorie");
-const recherche = document.getElementById("recherche");
-const btnVide = document.getElementById("btnVide");
-const champTitre = document.getElementById("titre");
-const champCategorie = document.getElementById("categorie");
-const champDescription = document.getElementById("description");
+const $ = (id) => document.getElementById(id);
 
-let ideeEnCours = null;
+const modal        = $("modal");
+const form         = $("formeIdee");
+const liste        = $("listeIdees");
+const vide         = $("etatVide");
+const compteur     = $("compteurIdees");
 
-// Pagination
-const PAGE_SIZE = 8;
-let pageCourante = 1;
-const paginationEl = document.getElementById("pagination");
+const ouvrirModal  = $("ouvrirModal");
+const btnPartager  = $("btnPartager");
+const btnVide      = $("btnVide");
+const fermerModal  = $("fermerModal");
+const annulerModal = $("annulerModal");
+
+const titre        = $("titre");
+const categorie    = $("categorie");
+const description  = $("description");
+const filtre       = $("filtreCategorie");
+const search       = $("recherche");
 
 // =========================
-// Supabase client
+// STATE
 // =========================
-// IMPORTANT: pour que ce code marche, il faut ajouter dans index.html:
-// <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-// puis fournir SUPABASE_URL et SUPABASE_ANON_KEY via le scope window.
+let editId = null;
+let cache  = [];
+let page   = 1;
 
-const SUPABASE_URL = window.SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+const PAGE_SIZE_DESKTOP = 8;
+const PAGE_SIZE_MOBILE  = 4;
 
-let supabase = null;
-let ideesCache = [];
-let realtimeSub = null;
+function getPageSize() {
+  return window.matchMedia("(max-width: 768px)").matches
+    ? PAGE_SIZE_MOBILE
+    : PAGE_SIZE_DESKTOP;
+}
 
-function setupSupabase() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.warn("Supabase: SUPABASE_URL ou SUPABASE_ANON_KEY manquant.");
-    return;
+// =========================
+// CATEGORIES COULEURS / ICONES
+// =========================
+const CATEGORIES = {
+  "Pédagogie":     { couleur: "#FF6B6B", icone: "fa-book" },
+  "Événement":     { couleur: "#FFA94D", icone: "fa-calendar" },
+  "Vie de campus": { couleur: "#51CF66", icone: "fa-building" },
+  "Technique":     { couleur: "#4C9AFF", icone: "fa-code" },
+  "autres":        { couleur: "#888888", icone: "fa-lightbulb" }
+};
+
+// =========================
+// CONFIRMATION SUPPRESSION
+// =========================
+function confirmerSuppression() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position:fixed; inset:0; background:rgba(0,0,0,0.5);
+      display:flex; align-items:center; justify-content:center;
+      z-index:9999;
+    `;
+
+    const box = document.createElement("div");
+    box.style.cssText = `
+      background:#fff; border-radius:16px; padding:32px 28px;
+      max-width:360px; width:90%; text-align:center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    `;
+
+    box.innerHTML = `
+      <div style="font-size:2.5rem; margin-bottom:12px;"></div>
+      <h3 style="margin:0 0 8px; font-size:1.2rem; color:#1e293b;">Supprimer cette idée ?</h3>
+      <p style="color:#64748b; font-size:0.9rem; margin:0 0 24px;">Cette action est irréversible.</p>
+      <div style="display:flex; gap:12px; justify-content:center;">
+        <button id="confirmNon" style="padding:10px 24px; border-radius:8px; border:2px solid #e2e8f0; background:#fff; color:#475569; font-size:0.95rem; cursor:pointer; font-weight:600;">Annuler</button>
+        <button id="confirmOui" style="padding:10px 24px; border-radius:8px; border:none; background:#ef4444; color:#fff; font-size:0.95rem; cursor:pointer; font-weight:600;">Supprimer</button>
+      </div>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const close = (result) => { overlay.remove(); resolve(result); };
+    box.querySelector("#confirmOui").onclick = () => close(true);
+    box.querySelector("#confirmNon").onclick = () => close(false);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
+  });
+}
+
+// =========================
+// IA — catégorie auto
+// =========================
+async function devinerCategorieIA(titreVal, descVal) {
+  try {
+    const res = await fetch("/api/classify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titre: titreVal, description: descVal, categories: CATS_VALIDES })
+    });
+    if (!res.ok) throw new Error("API classify error");
+    const data = await res.json();
+    const cat = data?.category;
+    if (!cat) return "autres";
+    return CATS_VALIDES.includes(cat) ? cat : "autres";
+  } catch (err) {
+    console.warn("IA indisponible :", err);
+    return "autres";
   }
-
-  if (!window.supabase || !window.supabase.createClient) {
-    console.warn(
-      "Supabase client introuvable (ajoute le script CDN @supabase/supabase-js@2 dans index.html)."
-    );
-    return;
-  }
-
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-async function chargerIdeesSupabase() {
-  if (!supabase) throw new Error("Supabase non initialisé.");
-
-  const { data, error } = await supabase
-    .from("idees")
-    .select("id, titre, categorie, description, date_creation")
-    .order("date_creation", { ascending: false });
-
-  if (error) throw error;
-
-  ideesCache = (data || []).map((row) => ({
-    id: row.id,
-    titre: row.titre,
-    categorie: row.categorie,
-    description: row.description,
-    dateCreation: row.date_creation ? new Date(row.date_creation).toLocaleDateString("fr-FR") : ""
-  }));
-
-  return ideesCache;
-}
-
-function formatCategorieSafe(categorie) {
-  // Normalise pour rester compatible avec l’ancien select ("Technique" -> "Amélioration technique")
-  if (categorie === "Technique") return "Amélioration technique";
-  return categorie;
-}
-
-function getCouleurEtIcone(categorie) {
-  const cat = formatCategorieSafe(categorie);
-  const def = CATEGORIES["Amélioration technique"];
-  return CATEGORIES[cat] ? CATEGORIES[cat] : def;
 }
 
 // =========================
-// UI helpers
+// MODAL
 // =========================
-function showToast(type, message) {
-  let container = document.querySelector(".toast-container");
-  if (!container) {
-    container = document.createElement("div");
-    container.className = "toast-container";
-    document.body.appendChild(container);
-  }
+function openModal(idee = null) {
+  editId = idee?.id || null;
 
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.opacity = "0";
-    toast.style.transform = "translateX(100%)";
-    toast.style.transition = "0.3s ease";
-    toast.remove();
-  }, 3200);
-}
-
-function echapperHTML(texte) {
-  const div = document.createElement("div");
-  div.textContent = texte;
-  return div.innerHTML;
-}
-
-function ouvrirModalForm(idee = null) {
-  ideeEnCours = idee;
+  // Réinitialise les états de validation
+  resetValidation();
 
   if (idee) {
-    titreModal.textContent = "Modifier l'idée";
-    champTitre.value = idee.titre;
-    champCategorie.value = idee.categorie;
-    champDescription.value = idee.description;
+    titre.value       = idee.titre       || "";
+    description.value = idee.description || "";
+    categorie.value   = idee.categorie   || "";
   } else {
-    titreModal.textContent = "Ajouter une idée";
-    formeIdee.reset();
-
-    // Catégorie par défaut (phase migration Supabase)
-    if (champCategorie) {
-      champCategorie.value = "Amélioration technique";
-    }
+    form.reset();
   }
 
+  updateCounters();
   modal.classList.add("modal--active");
 }
 
-function fermerModalForm() {
+function closeModal() {
   modal.classList.remove("modal--active");
-  formeIdee.reset();
-  ideeEnCours = null;
+  form.reset();
+  resetValidation();
+  editId = null;
 }
 
-ouvrirModal.addEventListener("click", () => ouvrirModalForm());
-btnPartager.addEventListener("click", () => ouvrirModalForm());
-btnVide.addEventListener("click", () => ouvrirModalForm());
-fermerModal.addEventListener("click", fermerModalForm);
-annulerModal.addEventListener("click", fermerModalForm);
+[ouvrirModal, btnPartager, btnVide].forEach(btn => {
+  btn?.addEventListener("click", () => openModal());
+});
+fermerModal?.addEventListener("click", closeModal);
+annulerModal?.addEventListener("click", closeModal);
+modal?.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
 
 // =========================
-// CRUD Supabase
+// TOAST
 // =========================
-function setFormBusy(busy) {
-  const submitBtn = formeIdee.querySelector('button[type="submit"]');
-  if (submitBtn) submitBtn.disabled = busy;
-  champTitre.disabled = busy;
-  champCategorie.disabled = busy;
-  champDescription.disabled = busy;
+function toast(msg, type = "success") {
+  let c = document.querySelector(".toast-container");
+  if (!c) {
+    c = document.createElement("div");
+    c.className = "toast-container";
+    document.body.appendChild(c);
+  }
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
 }
 
-async function ajouterOuModifierIdee(e) {
-  e.preventDefault();
+// =========================
+// CHARGEMENT DONNÉES
+// =========================
+async function loadIdees() {
+  const { data, error } = await db
+    .from("idees")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-  const titre = champTitre.value.trim();
-  const categorie = formatCategorieSafe(champCategorie.value);
-  const description = champDescription.value.trim();
+  if (error) { console.error(error); return []; }
 
-  if (!titre || !categorie || !description) {
-    alert("Tous les champs sont obligatoires");
-    return;
+  return data.map(i => ({
+    ...i,
+    date: new Date(i.created_at).toLocaleDateString("fr-FR")
+  }));
+}
+
+// =========================
+// VALIDATION
+// =========================
+
+// Remet tous les champs à l'état neutre
+function resetValidation() {
+  [titre, description].forEach(el => {
+    if (!el) return;
+    el.classList.remove("field--error", "field--success");
+  });
+  setMsg("errTitre", "");
+  setMsg("errDescription", "");
+  updateCounters();
+}
+
+// Affiche ou efface un message d'erreur
+function setMsg(id, msg) {
+  const el = $(id);
+  if (el) el.textContent = msg;
+}
+
+// Applique l'état visuel sur un champ
+function setFieldState(inputEl, errId, msg, ok) {
+  if (inputEl) {
+    inputEl.classList.toggle("field--error",   !ok);
+    inputEl.classList.toggle("field--success",  ok);
+  }
+  setMsg(errId, ok ? "" : msg);
+}
+
+// Validation titre
+function validateTitre() {
+  const val = titre.value.trim();
+
+  if (!val) {
+    setFieldState(titre, "errTitre", "Ce champ est obligatoire.", false);
+    return false;
+  }
+  if (val.length < 5) {
+    setFieldState(titre, "errTitre", "Minimum 5 caractères requis.", false);
+    return false;
+  }
+  if (val.length > 20) {
+    setFieldState(titre, "errTitre", "Maximum 20 caractères autorisés.", false);
+    return false;
   }
 
-  if (!supabase) {
-    showToast("delete", "Supabase non configuré. Ajoute SUPABASE_URL et SUPABASE_ANON_KEY.");
-    return;
+  setFieldState(titre, "errTitre", "", true);
+  return true;
+}
+
+// Validation description
+function validateDescription() {
+  const val = description.value.trim();
+
+  if (!val) {
+    setFieldState(description, "errDescription", "Ce champ est obligatoire.", false);
+    return false;
+  }
+  if (val.length < 30) {
+    setFieldState(description, "errDescription", "Minimum 30 caractères requis.", false);
+    return false;
+  }
+  if (val.length > 255) {
+    setFieldState(description, "errDescription", "Maximum 255 caractères autorisés.", false);
+    return false;
   }
 
-  setFormBusy(true);
+  setFieldState(description, "errDescription", "", true);
+  return true;
+}
 
-  try {
-    if (ideeEnCours) {
-      const { error } = await supabase
-        .from("idees")
-        .update({ titre, categorie, description })
-        .eq("id", ideeEnCours.id);
+function validateForm() {
+  const okT = validateTitre();
+  const okD = validateDescription();
+  return okT && okD;
+}
 
-      if (error) throw error;
+// =========================
+// COMPTEURS DE CARACTÈRES
+// =========================
+function updateCounters() {
+  const cTitre = $("counterTitre");
+  const cDesc  = $("counterDescription");
 
-      showToast("edit", "Idée modifiée avec succès");
-    } else {
-      // Phase 1: catégorie depuis le select (catégorisation IA branchée plus tard)
-      const { error } = await supabase.from("idees").insert({
-        titre,
-        categorie,
-        description
-      });
+  if (cTitre) {
+    const restants = Math.max(0, 20 - titre.value.length);
+    cTitre.textContent = `${restants} restant${restants !== 1 ? "s" : ""}`;
+    cTitre.style.color = restants <= 3 ? "#ef4444" : "#9ca3af";
+  }
 
-      if (error) throw error;
+  if (cDesc) {
+    const restants = Math.max(0, 255 - description.value.length);
+    cDesc.textContent = `${restants} restant${restants !== 1 ? "s" : ""}`;
+    cDesc.style.color = restants <= 20 ? "#ef4444" : "#9ca3af";
+  }
+}
 
-      showToast("success", "Idée ajoutée avec succès");
+// Validation + compteur en temps réel
+titre?.addEventListener("input", () => { updateCounters(); validateTitre(); });
+titre?.addEventListener("blur",  () => { validateTitre(); });
+description?.addEventListener("input", () => { updateCounters(); validateDescription(); });
+description?.addEventListener("blur",  () => { validateDescription(); });
+
+// =========================
+// LOADER IA (champ catégorie)
+// =========================
+function showIALoader(visible) {
+  const select = $("categorie");
+  const wrapper = select?.parentElement;
+
+  let loader = $("ia-loader");
+
+  if (visible) {
+    if (loader) return; // déjà présent
+
+    // Grise et cache le select
+    if (select) {
+      select.style.display = "none";
     }
 
-    fermerModalForm();
-    pageCourante = 1;
+    // Crée le bloc loader
+    loader = document.createElement("div");
+    loader.id = "ia-loader";
+    loader.innerHTML = `
+      <div class="ia-loader__inner">
+        <span class="ia-loader__spinner"></span>
+        <span class="ia-loader__text">L'IA choisit la catégorie…</span>
+      </div>
+    `;
 
-    // Recharger (Realtime re-synchronisera aussi, mais recharge immédiat pour UX)
-    await chargerIdeesSupabase();
-    afficherIdees();
-  } catch (err) {
-    console.error(err);
-    showToast("delete", "Erreur lors de l'opération Supabase.");
-  } finally {
-    setFormBusy(false);
+    wrapper?.appendChild(loader);
+  } else {
+    // Retire le loader
+    loader?.remove();
+    if (select) select.style.display = "";
   }
 }
 
-async function supprimerIdee(id) {
-  if (!confirm("Êtes-vous sûr de vouloir supprimer cette idée ?")) return;
-  if (!supabase) return;
+// =========================
+// SOUMISSION FORMULAIRE
+// =========================
+form?.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-  setFormBusy(true);
+  if (!validateForm()) return;
+
+  const titreVal = titre.value.trim();
+  const descVal  = description.value.trim();
+
+  const btnSubmit = form.querySelector("[type=submit]");
+  btnSubmit.disabled    = true;
+  btnSubmit.textContent = "En cours…";
+
   try {
-    const { error } = await supabase.from("idees").delete().eq("id", id);
-    if (error) throw error;
+    let catVal = categorie.value;
 
-    showToast("delete", "Idée supprimée");
-    // Recharger pour synchroniser immédiatement
-    await chargerIdeesSupabase();
-    afficherIdees();
+    if (!catVal || !CATS_VALIDES.includes(catVal)) {
+      showIALoader(true);
+      catVal = await devinerCategorieIA(titreVal, descVal);
+      showIALoader(false);
+    }
+
+    if (editId) {
+      const { error } = await db
+        .from("idees")
+        .update({ titre: titreVal, categorie: catVal, description: descVal })
+        .eq("id", editId);
+      if (error) throw error;
+
+      const idx = cache.findIndex(i => i.id === editId);
+      if (idx !== -1) {
+        cache[idx] = { ...cache[idx], titre: titreVal, categorie: catVal, description: descVal };
+      }
+      toast("Idée modifiée ");
+
+    } else {
+      const { data, error } = await db
+        .from("idees")
+        .insert([{ titre: titreVal, categorie: catVal, description: descVal }])
+        .select()
+        .single();
+      if (error) throw error;
+
+      cache.unshift({
+        ...data,
+        date: new Date(data.created_at).toLocaleDateString("fr-FR")
+      });
+      toast(`Ajoutée — ${catVal}`);
+    }
+
+    closeModal();
+    render();
+
   } catch (err) {
     console.error(err);
-    showToast("delete", "Erreur lors de la suppression.");
+    toast("Erreur : " + err.message, "delete");
   } finally {
-    setFormBusy(false);
+    btnSubmit.disabled    = false;
+    btnSubmit.textContent = "Soumettre";
   }
+});
+
+// =========================
+// SUPPRESSION
+// =========================
+async function remove(id) {
+  const ok = await confirmerSuppression();
+  if (!ok) return;
+
+  const { error } = await db.from("idees").delete().eq("id", id);
+  if (error) { toast("Erreur lors de la suppression", "delete"); return; }
+
+  cache = cache.filter(i => i.id !== id);
+  render();
+  toast("Idée supprimée ", "delete");
 }
 
-formeIdee.addEventListener("submit", ajouterOuModifierIdee);
-
 // =========================
-// Affichage
+// CARTE
 // =========================
-function creerCarteIdee(idee) {
-  const { couleur, icone } = getCouleurEtIcone(idee.categorie);
+function card(i) {
+  const c = CATEGORIES[i?.categorie] || CATEGORIES.autres;
 
-  const carte = document.createElement("div");
-  carte.className = "carte";
-  carte.style.borderTopColor = couleur;
-  carte.style.backgroundColor = couleur + "15";
+  const div = document.createElement("div");
+  div.className = "carte";
+  div.style.setProperty("--cat-color", c.couleur);
 
-  carte.innerHTML = `
+  div.innerHTML = `
     <div class="carte__entete">
       <div class="carte__categorie">
-        <i class="fas ${icone}"></i>
-        <span>${echapperHTML(formatCategorieSafe(idee.categorie))}</span>
+        <i class="fas ${c.icone}"></i> ${i?.categorie || "Autres"}
       </div>
-      <span class="carte__date">${echapperHTML(idee.dateCreation || "")}</span>
+      <span class="carte__date">${i?.date || ""}</span>
     </div>
-
-    <h3 class="carte__titre">${echapperHTML(idee.titre)}</h3>
-
-    <p class="carte__description">${echapperHTML(idee.description)}</p>
-
+    <h3 class="carte__titre">${i?.titre || ""}</h3>
+    <p class="carte__description">${i?.description || ""}</p>
     <div class="carte__actions">
-      <button class="btn-action btn-action--edit" title="Éditer" aria-label="Éditer">
-        <i class="fas fa-pencil"></i>
-      </button>
-      <button class="btn-action btn-action--delete" title="Supprimer" aria-label="Supprimer">
-        <i class="fas fa-trash"></i>
-      </button>
+      <button class="edit" title="Modifier" type="button"><i class="fas fa-pen"></i></button>
+      <button class="del" title="Supprimer" type="button"><i class="fas fa-trash"></i></button>
     </div>
   `;
 
-  carte.querySelector(".btn-action--edit").addEventListener("click", () => {
-    ouvrirModalForm(idee);
+  const id    = i?.id;
+  const idStr = id == null ? null : String(id);
+
+  div.querySelector(".edit")?.addEventListener("click", () => {
+    if (!idStr) { toast("Erreur : id manquant", "delete"); return; }
+    const idee = cache.find(x => String(x?.id) === idStr);
+    openModal(idee || { id });
   });
 
-  carte.querySelector(".btn-action--delete").addEventListener("click", () => {
-    supprimerIdee(idee.id);
+  div.querySelector(".del")?.addEventListener("click", () => {
+    if (!idStr) { toast("Erreur : id manquant", "delete"); return; }
+    remove(id);
   });
 
-  return carte;
+  return div;
 }
 
-function getIdeesFiltrees(idees) {
-  let ideesFiltrees = idees;
+// =========================
+// FILTRE
+// =========================
+function getFiltered() {
+  let r = cache;
 
-  const categorieFiltree = filtreCategorie.value;
-  if (categorieFiltree) {
-    ideesFiltrees = ideesFiltrees.filter((idea) => formatCategorieSafe(idea.categorie) === categorieFiltree);
+  if (filtre?.value) {
+    r = r.filter(i => i.categorie === filtre.value);
   }
 
-  const rechercheMot = recherche.value.toLowerCase();
-  if (rechercheMot) {
-    ideesFiltrees = ideesFiltrees.filter(
-      (idea) =>
-        idea.titre.toLowerCase().includes(rechercheMot) ||
-        idea.description.toLowerCase().includes(rechercheMot)
+  if (search?.value) {
+    const m = search.value.toLowerCase();
+    r = r.filter(i =>
+      i.titre.toLowerCase().includes(m) ||
+      i.description.toLowerCase().includes(m)
     );
   }
 
-  return ideesFiltrees;
+  return r;
 }
 
-function afficherPagination(total, page) {
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+// =========================
+// PAGINATION
+// =========================
+function renderPagination(total) {
+  const paginationEl = $("pagination");
+  if (!paginationEl) return;
 
-  if (total <= PAGE_SIZE) {
+  const size       = getPageSize();
+  const totalPages = Math.ceil(total / size);
+
+  if (totalPages <= 1) {
     paginationEl.style.display = "none";
     paginationEl.innerHTML = "";
     return;
   }
 
   paginationEl.style.display = "flex";
-  paginationEl.innerHTML = "";
+  page = Math.min(Math.max(page, 1), totalPages);
 
-  const creerBouton = ({ label, actif, desactive, onClick }) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = label;
-    if (actif) btn.classList.add("active");
-    if (desactive) btn.disabled = true;
-    if (onClick) btn.addEventListener("click", onClick);
-    return btn;
+  const makeBtn = (label, n, disabled = false, active = false) => {
+    const b = document.createElement("button");
+    b.type        = "button";
+    b.textContent = label;
+    if (disabled) b.disabled = true;
+    if (active)   b.classList.add("active");
+    if (!disabled) {
+      b.addEventListener("click", () => { page = n; render(); });
+    }
+    return b;
   };
 
-  paginationEl.appendChild(
-    creerBouton({
-      label: "←",
-      desactive: page === 1,
-      onClick: () => {
-        pageCourante = Math.max(1, pageCourante - 1);
-        afficherIdees();
-      },
-    })
-  );
+  const dot = () => {
+    const s = document.createElement("span");
+    s.textContent = "…";
+    s.style.cssText = "align-self:center; color:#64748b; font-weight:800;";
+    return s;
+  };
 
-  const start = Math.max(1, pageCourante - 2);
-  const end = Math.min(totalPages, start + 4);
-  const startFix = Math.max(1, end - 4);
+  const winSize = 5;
+  let start = Math.max(1, page - Math.floor(winSize / 2));
+  let end   = Math.min(totalPages, start + winSize - 1);
+  start     = Math.max(1, end - winSize + 1);
 
-  for (let p = startFix; p <= end; p++) {
-    paginationEl.appendChild(
-      creerBouton({
-        label: String(p),
-        actif: p === pageCourante,
-        onClick: () => {
-          pageCourante = p;
-          afficherIdees();
-        },
-      })
-    );
-  }
+  const parts = [];
+  parts.push(makeBtn("←", page - 1, page <= 1));
+  if (start > 1) parts.push(makeBtn("1", 1, false, page === 1));
+  if (start > 2) parts.push(dot());
+  for (let n = start; n <= end; n++) parts.push(makeBtn(String(n), n, false, n === page));
+  if (end < totalPages - 1) parts.push(dot());
+  if (end < totalPages) parts.push(makeBtn(String(totalPages), totalPages, false, page === totalPages));
+  parts.push(makeBtn("→", page + 1, page >= totalPages));
 
-  paginationEl.appendChild(
-    creerBouton({
-      label: "→",
-      desactive: pageCourante >= totalPages,
-      onClick: () => {
-        pageCourante = Math.min(totalPages, pageCourante + 1);
-        afficherIdees();
-      },
-    })
-  );
+  paginationEl.innerHTML = "";
+  parts.forEach(p => paginationEl.appendChild(p));
 }
 
-function afficherIdees(idees = ideesCache) {
-  const ideesFiltrees = getIdeesFiltrees(idees);
-  compteurIdees.textContent = ideesFiltrees.length;
+// =========================
+// RENDU
+// =========================
+function render() {
+  const data = getFiltered();
+  compteur.textContent = data.length;
 
-  if (ideesFiltrees.length === 0) {
-    listeIdees.innerHTML = "";
-    etatVide.style.display = "flex";
-    paginationEl.style.display = "none";
-    paginationEl.innerHTML = "";
+  if (!data.length) {
+    liste.innerHTML = "";
+    vide.style.display = "flex";
+    renderPagination(0);
     return;
   }
 
-  etatVide.style.display = "none";
+  vide.style.display = "none";
 
-  const totalPages = Math.max(1, Math.ceil(ideesFiltrees.length / PAGE_SIZE));
-  if (pageCourante > totalPages) pageCourante = totalPages;
+  const size      = getPageSize();
+  const start     = (page - 1) * size;
+  const pageData  = data.slice(start, start + size);
 
-  const debut = (pageCourante - 1) * PAGE_SIZE;
-  const fin = debut + PAGE_SIZE;
-  const pageItems = ideesFiltrees.slice(debut, fin);
-
-  listeIdees.innerHTML = "";
-  pageItems.forEach((idee) => listeIdees.appendChild(creerCarteIdee(idee)));
-
-  afficherPagination(ideesFiltrees.length, pageCourante);
+  liste.innerHTML = "";
+  pageData.forEach(i => liste.appendChild(card(i)));
+  renderPagination(data.length);
 }
 
-// =========================
-// Filtres
-// =========================
-filtreCategorie.addEventListener("change", () => {
-  pageCourante = 1;
-  afficherIdees();
-});
-
-recherche.addEventListener("input", () => {
-  pageCourante = 1;
-  afficherIdees();
-});
+filtre?.addEventListener("change", () => { page = 1; render(); });
+search?.addEventListener("input",  () => { page = 1; render(); });
 
 // =========================
-// Modal close
+// REALTIME
 // =========================
-modal.addEventListener("click", (e) => {
-  if (e.target === modal) fermerModalForm();
-});
-
-// =========================
-// Realtime
-// =========================
-function initRealtime() {
-  if (!supabase) return;
-
-  if (realtimeSub) {
-    supabase.removeChannel(realtimeSub);
-  }
-
-  realtimeSub = supabase
-    .channel("realtime-idees")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "idees" },
-      async () => {
-        // Recharger et rerendre
-        try {
-          await chargerIdeesSupabase();
-          afficherIdees();
-        } catch (err) {
-          console.error("Realtime reload failed", err);
+function startRealtime() {
+  db.channel("idees-realtime")
+    .on("postgres_changes", { event: "*", schema: "public", table: "idees" }, (payload) => {
+      if (payload.eventType === "INSERT") {
+        const existe = cache.find(i => i.id === payload.new.id);
+        if (!existe) {
+          cache.unshift({ ...payload.new, date: new Date(payload.new.created_at).toLocaleDateString("fr-FR") });
+          render();
+        }
+      } else if (payload.eventType === "UPDATE") {
+        const idx = cache.findIndex(i => i.id === payload.new.id);
+        if (idx !== -1) {
+          cache[idx] = { ...cache[idx], ...payload.new, date: new Date(payload.new.created_at).toLocaleDateString("fr-FR") };
+          render();
+        }
+      } else if (payload.eventType === "DELETE") {
+        if (cache.find(i => i.id === payload.old.id)) {
+          cache = cache.filter(i => i.id !== payload.old.id);
+          render();
         }
       }
-    )
-    .subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        console.log("Realtime: connected");
-      }
-    });
+    })
+    .subscribe();
 }
 
 // =========================
-// init
+// INIT
 // =========================
 document.addEventListener("DOMContentLoaded", async () => {
-  setupSupabase();
-
-  if (!supabase) {
-    // Fallback UX: affiche un message au lieu de crash
-    console.warn("Supabase non initialisé. Migration incomplète.");
-    etatVide.style.display = "flex";
-    paginationEl.style.display = "none";
-    return;
-  }
-
-  try {
-    await chargerIdeesSupabase();
-    afficherIdees();
-    initRealtime();
-  } catch (err) {
-    console.error(err);
-    etatVide.style.display = "flex";
-    paginationEl.style.display = "none";
-    compteurIdees.textContent = "0";
-  }
+  cache = await loadIdees();
+  updateCounters();
+  render();
+  startRealtime();
 });
-
