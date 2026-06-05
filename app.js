@@ -44,7 +44,7 @@ let page   = 1;
 const PAGE_SIZE_DESKTOP = 8;
 const PAGE_SIZE_MOBILE  = 4;
 
-function getPageSize() {
+function obtenirTaillePage() {
   return window.matchMedia("(max-width: 768px)").matches
     ? PAGE_SIZE_MOBILE
     : PAGE_SIZE_DESKTOP;
@@ -64,7 +64,7 @@ const CATEGORIES = {
 // =========================
 // UTILS
 // =========================
-const sanitize = (str) => {
+const assainir = (str) => {
   const temp = document.createElement('div');
   temp.textContent = str;
   return temp.innerHTML;
@@ -102,10 +102,10 @@ function confirmerSuppression() {
     overlay.appendChild(box);
     document.body.appendChild(overlay);
 
-    const close = (result) => { overlay.remove(); resolve(result); };
-    box.querySelector("#confirmOui").onclick = () => close(true);
-    box.querySelector("#confirmNon").onclick = () => close(false);
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
+    const fermer = (result) => { overlay.remove(); resolve(result); };
+    box.querySelector("#confirmOui").onclick = () => fermer(true);
+    box.querySelector("#confirmNon").onclick = () => fermer(false);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) fermer(false); });
   });
 }
 
@@ -133,11 +133,10 @@ async function devinerCategorieIA(titreVal, descVal) {
 // =========================
 // MODAL
 // =========================
-function openModal(idee = null) {
+function ouvrirModalFn(idee = null) {
   editId = idee?.id || null;
 
-  // Réinitialise les états de validation
-  resetValidation();
+  reinitialiserValidation();
 
   if (idee) {
     titre.value       = idee.titre       || "";
@@ -147,28 +146,28 @@ function openModal(idee = null) {
     form.reset();
   }
 
-  updateCounters();
+  mettreAJourCompteurs();
   modal.classList.add("modal--active");
 }
 
-function closeModal() {
+function fermerModalFn() {
   modal.classList.remove("modal--active");
   form.reset();
-  resetValidation();
+  reinitialiserValidation();
   editId = null;
 }
 
 [ouvrirModal, btnPartager, btnVide].forEach(btn => {
-  btn?.addEventListener("click", () => openModal());
+  btn?.addEventListener("click", () => ouvrirModalFn());
 });
-fermerModal?.addEventListener("click", closeModal);
-annulerModal?.addEventListener("click", closeModal);
-modal?.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+fermerModal?.addEventListener("click", fermerModalFn);
+annulerModal?.addEventListener("click", fermerModalFn);
+modal?.addEventListener("click", (e) => { if (e.target === modal) fermerModalFn(); });
 
 // =========================
 // TOAST
 // =========================
-function toast(msg, type = "success") {
+function notification(msg, type = "success") {
   let c = document.querySelector(".toast-container");
   if (!c) {
     c = document.createElement("div");
@@ -185,7 +184,7 @@ function toast(msg, type = "success") {
 // =========================
 // CHARGEMENT DONNÉES
 // =========================
-async function loadIdees() {
+async function chargerIdees() {
   const { data, error } = await db
     .from("idees")
     .select("*")
@@ -202,85 +201,79 @@ async function loadIdees() {
 // =========================
 // VALIDATION
 // =========================
-
-// Remet tous les champs à l'état neutre
-function resetValidation() {
+function reinitialiserValidation() {
   [titre, description].forEach(el => {
     if (!el) return;
     el.classList.remove("field--error", "field--success");
   });
-  setMsg("errTitre", "");
-  setMsg("errDescription", "");
-  updateCounters();
+  definirMessage("errTitre", "");
+  definirMessage("errDescription", "");
+  mettreAJourCompteurs();
 }
 
-// Affiche ou efface un message d'erreur
-function setMsg(id, msg) {
+function definirMessage(id, msg) {
   const el = $(id);
   if (el) el.textContent = msg;
 }
 
-// Applique l'état visuel sur un champ
-function setFieldState(inputEl, errId, msg, ok) {
+function definirEtatChamp(inputEl, errId, msg, ok) {
   if (inputEl) {
     inputEl.classList.toggle("field--error",   !ok);
     inputEl.classList.toggle("field--success",  ok);
   }
-  setMsg(errId, ok ? "" : msg);
+  definirMessage(errId, ok ? "" : msg);
 }
 
-// Validation titre
-function validateTitre() {
+function validerTitre() {
   const val = titre.value.trim();
 
   if (!val) {
-    setFieldState(titre, "errTitre", "Ce champ est obligatoire.", false);
+    definirEtatChamp(titre, "errTitre", "Ce champ est obligatoire.", false);
     return false;
   }
   if (val.length < 5) {
-    setFieldState(titre, "errTitre", "Minimum 5 caractères requis.", false);
+    definirEtatChamp(titre, "errTitre", "Minimum 5 caractères requis.", false);
     return false;
   }
   if (val.length > 20) {
-    setFieldState(titre, "errTitre", "Maximum 20 caractères autorisés.", false);
+    definirEtatChamp(titre, "errTitre", "Maximum 20 caractères autorisés.", false);
     return false;
   }
 
-  setFieldState(titre, "errTitre", "", true);
+  definirEtatChamp(titre, "errTitre", "", true);
   return true;
 }
 
-// Validation description
-function validateDescription() {
+function validerDescription() {
   const val = description.value.trim();
 
   if (!val) {
-    setFieldState(description, "errDescription", "Ce champ est obligatoire.", false);
+    definirEtatChamp(description, "errDescription", "Ce champ est obligatoire.", false);
     return false;
   }
   if (val.length < 30) {
-    setFieldState(description, "errDescription", "Minimum 30 caractères requis.", false);
+    definirEtatChamp(description, "errDescription", "Minimum 30 caractères requis.", false);
     return false;
   }
   if (val.length > 255) {
-    setFieldState(description, "errDescription", "Maximum 255 caractères autorisés.", false);
+    definirEtatChamp(description, "errDescription", "Maximum 255 caractères autorisés.", false);
     return false;
   }
 
-  setFieldState(description, "errDescription", "", true);
+  definirEtatChamp(description, "errDescription", "", true);
   return true;
 }
 
-function validateForm() {
-  const okT = validateTitre();
-  const okD = validateDescription();
+function validerFormulaire() {
+  const okT = validerTitre();
+  const okD = validerDescription();
   return okT && okD;
 }
 
 // =========================
 // COMPTEURS DE CARACTÈRES
 // =========================
-function updateCounters() {
+function mettreAJourCompteurs() {
   const cTitre = $("counterTitre");
   const cDesc  = $("counterDescription");
 
@@ -297,30 +290,27 @@ function updateCounters() {
   }
 }
 
-// Validation + compteur en temps réel
-titre?.addEventListener("input", () => { updateCounters(); validateTitre(); });
-titre?.addEventListener("blur",  () => { validateTitre(); });
-description?.addEventListener("input", () => { updateCounters(); validateDescription(); });
-description?.addEventListener("blur",  () => { validateDescription(); });
+titre?.addEventListener("input", () => { mettreAJourCompteurs(); validerTitre(); });
+titre?.addEventListener("blur",  () => { validerTitre(); });
+description?.addEventListener("input", () => { mettreAJourCompteurs(); validerDescription(); });
+description?.addEventListener("blur",  () => { validerDescription(); });
 
 // =========================
 // LOADER IA (champ catégorie)
 // =========================
-function showIALoader(visible) {
+function afficherChargementIA(visible) {
   const select = $("categorie");
   const wrapper = select?.parentElement;
 
   let loader = $("ia-loader");
 
   if (visible) {
-    if (loader) return; // déjà présent
+    if (loader) return;
 
-    // Grise et cache le select
     if (select) {
       select.style.display = "none";
     }
 
-    // Crée le bloc loader
     loader = document.createElement("div");
     loader.id = "ia-loader";
     loader.innerHTML = `
@@ -332,7 +322,6 @@ function showIALoader(visible) {
 
     wrapper?.appendChild(loader);
   } else {
-    // Retire le loader
     loader?.remove();
     if (select) select.style.display = "";
   }
@@ -344,10 +333,10 @@ function showIALoader(visible) {
 form?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  if (!validateForm()) return;
+  if (!validerFormulaire()) return;
 
-  const titreVal = sanitize(titre.value.trim());
-  const descVal  = sanitize(description.value.trim());
+  const titreVal = assainir(titre.value.trim());
+  const descVal  = assainir(description.value.trim());
 
   const btnSubmit = form.querySelector("[type=submit]");
   btnSubmit.disabled    = true;
@@ -358,9 +347,9 @@ form?.addEventListener("submit", async (e) => {
 
     if (!catVal || !CATS_VALIDES.includes(catVal)) {
       btnSubmit.textContent = "Analyse IA en cours...";
-      showIALoader(true);
+      afficherChargementIA(true);
       catVal = await devinerCategorieIA(titreVal, descVal);
-      showIALoader(false);
+      afficherChargementIA(false);
     }
 
     btnSubmit.textContent = "Enregistrement...";
@@ -375,7 +364,7 @@ form?.addEventListener("submit", async (e) => {
       if (idx !== -1) {
         cache[idx] = { ...cache[idx], titre: titreVal, categorie: catVal, description: descVal };
       }
-      toast("Idée modifiée ");
+      notification("Idée modifiée ");
 
     } else {
       const { data, error } = await db
@@ -389,15 +378,15 @@ form?.addEventListener("submit", async (e) => {
         ...data,
         date: new Date(data.created_at).toLocaleDateString("fr-FR")
       });
-      toast(`Ajoutée — ${catVal}`);
+      notification(`Ajoutée — ${catVal}`);
     }
 
-    closeModal();
-    render();
+    fermerModalFn();
+    afficher();
 
   } catch (err) {
     console.error(err);
-    toast("Erreur : " + err.message, "delete");
+    notification("Erreur : " + err.message, "delete");
   } finally {
     btnSubmit.disabled    = false;
     btnSubmit.textContent = "Soumettre";
@@ -407,22 +396,22 @@ form?.addEventListener("submit", async (e) => {
 // =========================
 // SUPPRESSION
 // =========================
-async function remove(id) {
+async function supprimer(id) {
   const ok = await confirmerSuppression();
   if (!ok) return;
 
   const { error } = await db.from("idees").delete().eq("id", id);
-  if (error) { toast("Erreur lors de la suppression", "delete"); return; }
+  if (error) { notification("Erreur lors de la suppression", "delete"); return; }
 
   cache = cache.filter(i => i.id !== id);
-  render();
-  toast("Idée supprimée ", "delete");
+  afficher();
+  notification("Idée supprimée ", "delete");
 }
 
 // =========================
 // CARTE
 // =========================
-function card(i) {
+function carte(i) {
   const c = CATEGORIES[i?.categorie] || CATEGORIES.autres;
 
   const div = document.createElement("div");
@@ -448,14 +437,14 @@ function card(i) {
   const idStr = id == null ? null : String(id);
 
   div.querySelector(".edit")?.addEventListener("click", () => {
-    if (!idStr) { toast("Erreur : id manquant", "delete"); return; }
+    if (!idStr) { notification("Erreur : id manquant", "delete"); return; }
     const idee = cache.find(x => String(x?.id) === idStr);
-    openModal(idee || { id });
+    ouvrirModalFn(idee || { id });
   });
 
   div.querySelector(".del")?.addEventListener("click", () => {
-    if (!idStr) { toast("Erreur : id manquant", "delete"); return; }
-    remove(id);
+    if (!idStr) { notification("Erreur : id manquant", "delete"); return; }
+    supprimer(id);
   });
 
   return div;
@@ -464,7 +453,7 @@ function card(i) {
 // =========================
 // FILTRE
 // =========================
-function getFiltered() {
+function obtenirFiltrees() {
   let r = cache;
 
   if (filtre?.value) {
@@ -485,11 +474,11 @@ function getFiltered() {
 // =========================
 // PAGINATION
 // =========================
-function renderPagination(total) {
+function afficherPagination(total) {
   const paginationEl = $("pagination");
   if (!paginationEl) return;
 
-  const size       = getPageSize();
+  const size       = obtenirTaillePage();
   const totalPages = Math.ceil(total / size);
 
   if (totalPages <= 1) {
@@ -501,19 +490,19 @@ function renderPagination(total) {
   paginationEl.style.display = "flex";
   page = Math.min(Math.max(page, 1), totalPages);
 
-  const makeBtn = (label, n, disabled = false, active = false) => {
+  const creerBouton = (label, n, disabled = false, active = false) => {
     const b = document.createElement("button");
     b.type        = "button";
     b.textContent = label;
     if (disabled) b.disabled = true;
     if (active)   b.classList.add("active");
     if (!disabled) {
-      b.addEventListener("click", () => { page = n; render(); });
+      b.addEventListener("click", () => { page = n; afficher(); });
     }
     return b;
   };
 
-  const dot = () => {
+  const pointsSuspension = () => {
     const s = document.createElement("span");
     s.textContent = "…";
     s.style.cssText = "align-self:center; color:#64748b; font-weight:800;";
@@ -526,13 +515,13 @@ function renderPagination(total) {
   start     = Math.max(1, end - winSize + 1);
 
   const parts = [];
-  parts.push(makeBtn("←", page - 1, page <= 1));
-  if (start > 1) parts.push(makeBtn("1", 1, false, page === 1));
-  if (start > 2) parts.push(dot());
-  for (let n = start; n <= end; n++) parts.push(makeBtn(String(n), n, false, n === page));
-  if (end < totalPages - 1) parts.push(dot());
-  if (end < totalPages) parts.push(makeBtn(String(totalPages), totalPages, false, page === totalPages));
-  parts.push(makeBtn("→", page + 1, page >= totalPages));
+  parts.push(creerBouton("←", page - 1, page <= 1));
+  if (start > 1) parts.push(creerBouton("1", 1, false, page === 1));
+  if (start > 2) parts.push(pointsSuspension());
+  for (let n = start; n <= end; n++) parts.push(creerBouton(String(n), n, false, n === page));
+  if (end < totalPages - 1) parts.push(pointsSuspension());
+  if (end < totalPages) parts.push(creerBouton(String(totalPages), totalPages, false, page === totalPages));
+  parts.push(creerBouton("→", page + 1, page >= totalPages));
 
   paginationEl.innerHTML = "";
   parts.forEach(p => paginationEl.appendChild(p));
@@ -541,53 +530,53 @@ function renderPagination(total) {
 // =========================
 // RENDU
 // =========================
-function render() {
-  const data = getFiltered();
+function afficher() {
+  const data = obtenirFiltrees();
   compteur.textContent = data.length;
 
   if (!data.length) {
     liste.innerHTML = "";
     vide.style.display = "flex";
-    renderPagination(0);
+    afficherPagination(0);
     return;
   }
 
   vide.style.display = "none";
 
-  const size      = getPageSize();
+  const size      = obtenirTaillePage();
   const start     = (page - 1) * size;
   const pageData  = data.slice(start, start + size);
 
   liste.innerHTML = "";
-  pageData.forEach(i => liste.appendChild(card(i)));
-  renderPagination(data.length);
+  pageData.forEach(i => liste.appendChild(carte(i)));
+  afficherPagination(data.length);
 }
 
-filtre?.addEventListener("change", () => { page = 1; render(); });
-search?.addEventListener("input",  () => { page = 1; render(); });
+filtre?.addEventListener("change", () => { page = 1; afficher(); });
+search?.addEventListener("input",  () => { page = 1; afficher(); });
 
 // =========================
 // REALTIME
 // =========================
-function startRealtime() {
+function demarrerTempsReel() {
   db.channel("idees-realtime")
     .on("postgres_changes", { event: "*", schema: "public", table: "idees" }, (payload) => {
       if (payload.eventType === "INSERT") {
         const existe = cache.find(i => i.id === payload.new.id);
         if (!existe) {
           cache.unshift({ ...payload.new, date: new Date(payload.new.created_at).toLocaleDateString("fr-FR") });
-          render();
+          afficher();
         }
       } else if (payload.eventType === "UPDATE") {
         const idx = cache.findIndex(i => i.id === payload.new.id);
         if (idx !== -1) {
           cache[idx] = { ...cache[idx], ...payload.new, date: new Date(payload.new.created_at).toLocaleDateString("fr-FR") };
-          render();
+          afficher();
         }
       } else if (payload.eventType === "DELETE") {
         if (cache.find(i => i.id === payload.old.id)) {
           cache = cache.filter(i => i.id !== payload.old.id);
-          render();
+          afficher();
         }
       }
     })
@@ -598,8 +587,8 @@ function startRealtime() {
 // INIT
 // =========================
 document.addEventListener("DOMContentLoaded", async () => {
-  cache = await loadIdees();
-  updateCounters();
-  render();
-  startRealtime();
+  cache = await chargerIdees();
+  mettreAJourCompteurs();
+  afficher();
+  demarrerTempsReel();
 });
