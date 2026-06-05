@@ -1,4 +1,4 @@
-# Sunu-Idées (SPA) — Simplon | Vercel + Supabase + OpenRouter
+# Sunu-Idées (SPA) — Simplon | Netlify + Supabase + OpenRouter
 
 ## Présentation
 Sunu-Idées est une **Single Page Application (SPA)** qui permet de proposer, catégoriser et gérer des idées pour améliorer la vie du campus.
@@ -8,13 +8,13 @@ Sunu-Idées est une **Single Page Application (SPA)** qui permet de proposer, ca
 - Interface réactive sans rechargement de page
 
 ## Fonctionnalités
-- ✅ Validation formulaire (titre: min 5 caractères, description: min 10 caractères)
+- ✅ Validation formulaire (titre: 5-20 caractères, description: 30-255 caractères)
 - ✅ Sanitization anti-XSS (on traite uniquement du texte)
 - ✅ Catégorisation IA automatique via `POST /api/categorize`
 - ✅ Fallback obligatoire sur erreur/timeout/taux limités : **"Amélioration technique"**
 - ✅ CRUD Supabase :
   - Create (insert)
-  - Read (select au chargement)
+  - Read (Realtime sync + select au chargement)
   - Update (édition sans rechargement)
   - Delete (suppression sans rechargement)
 - ✅ UX : bouton désactivé + spinner et texte **"Analyse IA en cours..."**
@@ -86,5 +86,3 @@ vercel
 - JavaScript Vanilla + ES Modules
 - Vercel Serverless Functions
 - OpenRouter (appel côté serveur)
-
-

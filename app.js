@@ -114,7 +114,7 @@ function confirmerSuppression() {
 // =========================
 async function devinerCategorieIA(titreVal, descVal) {
   try {
-    const res = await fetch("/.netlify/functions/categorize", {
+    const res = await fetch("/api/categorize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ titre: titreVal, description: descVal, categories: CATS_VALIDES })
@@ -351,17 +351,19 @@ form?.addEventListener("submit", async (e) => {
 
   const btnSubmit = form.querySelector("[type=submit]");
   btnSubmit.disabled    = true;
-  btnSubmit.textContent = "En cours…";
+  btnSubmit.textContent = "Validation...";
 
   try {
     let catVal = categorie.value;
 
     if (!catVal || !CATS_VALIDES.includes(catVal)) {
+      btnSubmit.textContent = "Analyse IA en cours...";
       showIALoader(true);
       catVal = await devinerCategorieIA(titreVal, descVal);
       showIALoader(false);
     }
 
+    btnSubmit.textContent = "Enregistrement...";
     if (editId) {
       const { error } = await db
         .from("idees")

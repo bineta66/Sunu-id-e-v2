@@ -1,6 +1,0 @@
-[build]
-  publish = "."
-  functions = "api"
-
-[functions]
-  node_version = "20"
