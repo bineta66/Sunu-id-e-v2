@@ -1,4 +1,4 @@
-# Sunu-Idées (SPA) — Simplon | Netlify + Supabase + OpenRouter
+# Sunu-Idées (SPA) — Simplon | vercel + Supabase + OpenRouter
 
 ## Présentation
 Sunu-Idées est une **Single Page Application (SPA)** qui permet de proposer, catégoriser et gérer des idées pour améliorer la vie du campus.
@@ -8,17 +8,17 @@ Sunu-Idées est une **Single Page Application (SPA)** qui permet de proposer, ca
 - Interface réactive sans rechargement de page
 
 ## Fonctionnalités
-- ✅ Validation formulaire (titre: 5-20 caractères, description: 30-255 caractères)
-- ✅ Sanitization anti-XSS (on traite uniquement du texte)
-- ✅ Catégorisation IA automatique via `POST /api/categorize`
-- ✅ Fallback obligatoire sur erreur/timeout/taux limités : **"Amélioration technique"**
-- ✅ CRUD Supabase :
+-  Validation formulaire (titre: 5-20 caractères, description: 30-255 caractères)
+- Sanitization anti-XSS (on traite uniquement du texte)
+- Catégorisation IA automatique via `POST /api/categorize`
+-  Fallback obligatoire sur erreur/timeout/taux limités : **"Amélioration technique"**
+- CRUD Supabase :
   - Create (insert)
   - Read (Realtime sync + select au chargement)
   - Update (édition sans rechargement)
   - Delete (suppression sans rechargement)
-- ✅ UX : bouton désactivé + spinner et texte **"Analyse IA en cours..."**
-- ✅ Notifications toast (succès / erreurs)
+-  UX : bouton désactivé + spinner et texte **"Analyse IA en cours..."**
+- Notifications toast (succès / erreurs)
 
 ## Architecture
 ```
@@ -26,39 +26,14 @@ Sunu-Idées est une **Single Page Application (SPA)** qui permet de proposer, ca
 ├── api
 │   └── categorize.js
 │
-├── src
-│   └── js
-│       ├── main.js
-│       ├── config
-│       │   └── supabase.js
-│       ├── services
-│       │   ├── ai.service.js
-│       │   └── ideas.service.js
-│       ├── ui
-│       │   ├── render.js
-│       │   ├── loading.js
-│       │   └── notifications.js
-│       ├── utils
-│       │   ├── validator.js
-│       │   ├── sanitizer.js
-│       │   ├── categories.js
-│       │   └── aiFallback.js
-│       └── events
-│           └── formEvents.js
+ 
 ├── index.html
 ├── style.css
-├── vercel.json
-├── package.json
+├──app.js
 └── README.md
 ```
 
-## Installation (local)
-> Pour tester localement, il faut créer les variables d’environnement dans un fichier `.env.local`.
 
-```bash
-npm install
-npm run dev
-```
 
 ## Variables d’environnement
 Créer un fichier **.env.local** à la racine (non commité) :
@@ -76,13 +51,11 @@ OPENROUTER_API_KEY=
 - Déployer uniquement sur **Vercel**
 - Le front sert l’`index.html`
 - Les routes API servent depuis `api/`
-- **Aucune dépendance node-fetch** n’est requise : le handler utilise `fetch` natif (runtime Vercel)
 
-```bash
 vercel
 ```
 
 ## Technologies utilisées
-- JavaScript Vanilla + ES Modules
+- JavaScript Vanilla 
 - Vercel Serverless Functions
 - OpenRouter (appel côté serveur)
